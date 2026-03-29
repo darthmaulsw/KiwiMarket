@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from database import engine, SessionLocal
 from models import Base, Bounty
-from routers import bounties, bets, proof
+from routers import bounties, bets, proof, profile
 
 logger = logging.getLogger("kiwimarket")
 
@@ -31,13 +31,8 @@ app = FastAPI(title="KiwiMarket API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "https://heterotelic-haylee-nonepically.ngrok-free.dev",
-    ],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+    allow_origins=["https://heterotelic-haylee-nonepically.ngrok-free.dev"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +41,7 @@ app.add_middleware(
 app.include_router(bounties.router)
 app.include_router(bets.router)
 app.include_router(proof.router)
+app.include_router(profile.router)
 
 
 # ─── Background expiry task ────────────────────────────────────────────────
