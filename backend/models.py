@@ -29,6 +29,7 @@ class Bet(Base):
     bettor_wallet = Column(String, nullable=False)
     side = Column(String, nullable=False)       # "YES" or "NO"
     amount_sol = Column(Float, nullable=False)
+    tx_signature = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
     bounty = relationship("Bounty", back_populates="bets")

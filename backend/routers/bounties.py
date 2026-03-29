@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 
 from database import get_db
-from models import Bounty
-from schemas import BountyCreate, BountyOut
+from models import Bounty, Bet
+from schemas import BountyCreate, BountyOut, BetFeedItem
 
 router = APIRouter(prefix="/bounties", tags=["bounties"])
 
@@ -44,6 +44,20 @@ def get_bounty(bounty_id: int, db: Session = Depends(get_db)):
     if not bounty:
         raise HTTPException(status_code=404, detail="Bounty not found")
     return _attach_prices(bounty)
+
+
+@router.get("/{bounty_id}/bets", response_model=list[BetFeedItem])
+def get_bounty_bets(bounty_id: int, db: Session = Depends(get_db)):
+    bounty = db.query(Bounty).filter(Bounty.id == bounty_id).first()
+    if not bounty:
+        raise HTTPException(status_code=404, detail="Bounty not found")
+    bets = (
+        db.query(Bet)
+        .filter(Bet.bounty_id == bounty_id)
+        .order_by(Bet.created_at.desc())
+        .all()
+    )
+    return bets
 
 
 @router.post("", response_model=BountyOut, status_code=201)

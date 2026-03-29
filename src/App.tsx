@@ -4,6 +4,7 @@ import Feed from './pages/Feed'
 import Create from './pages/Create'
 import Wallet from './pages/Wallet'
 import Profile from './pages/Profile'
+import BountyDetail from './pages/BountyDetail'
 
 const navStyle: React.CSSProperties = {
   display: 'flex',
@@ -72,6 +73,7 @@ export default function App() {
       <main style={{ flex: 1, paddingBottom: 80 }}>
         <Routes>
           <Route path="/" element={<Feed />} />
+          <Route path="/bounty/:id" element={<BountyDetail />} />
           <Route path="/create" element={<Create />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/profile" element={<Profile />} />

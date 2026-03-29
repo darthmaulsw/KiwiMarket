@@ -1,13 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta, timezone
+from sqlalchemy import text
 
 from database import engine, SessionLocal
 from models import Base, Bounty
 from routers import bounties, bets
 
-# Create all tables
+# Create all tables (no-op if they already exist)
 Base.metadata.create_all(bind=engine)
+
+# Add tx_signature column to existing bets table if it's missing (safe migration)
+with engine.connect() as _conn:
+    try:
+        _conn.execute(text("ALTER TABLE bets ADD COLUMN tx_signature VARCHAR"))
+        _conn.commit()
+    except Exception:
+        pass  # Column already exists — ignore
 
 app = FastAPI(title="KiwiMarket API", version="0.1.0")
 

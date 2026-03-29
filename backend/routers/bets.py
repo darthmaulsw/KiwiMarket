@@ -16,7 +16,6 @@ def place_bet(payload: BetCreate, db: Session = Depends(get_db)):
     if bounty.status != "open":
         raise HTTPException(status_code=400, detail=f"Bounty is {bounty.status}, not open")
 
-    # Update the appropriate pool
     if payload.side == "YES":
         bounty.yes_pool += payload.amount_sol
     else:
@@ -27,6 +26,7 @@ def place_bet(payload: BetCreate, db: Session = Depends(get_db)):
         bettor_wallet=payload.bettor_wallet,
         side=payload.side,
         amount_sol=payload.amount_sol,
+        tx_signature=payload.tx_signature,
     )
     db.add(bet)
     db.commit()

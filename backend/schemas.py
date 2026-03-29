@@ -37,6 +37,7 @@ class BetCreate(BaseModel):
     bettor_wallet: str
     side: str = Field(pattern="^(YES|NO)$")
     amount_sol: float = Field(gt=0)
+    tx_signature: Optional[str] = None
 
 
 class BetOut(BaseModel):
@@ -45,6 +46,18 @@ class BetOut(BaseModel):
     bettor_wallet: str
     side: str
     amount_sol: float
+    tx_signature: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BetFeedItem(BaseModel):
+    id: int
+    bettor_wallet: str
+    side: str
+    amount_sol: float
+    tx_signature: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
