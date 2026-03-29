@@ -9,6 +9,34 @@ export interface ProofResult {
   reasoning?: string | null
 }
 
+async function compressImage(file: File, maxDimension = 1024, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height / width) * maxDimension)
+          width = maxDimension
+        } else {
+          width = Math.round((width / height) * maxDimension)
+          height = maxDimension
+        }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 export function useSubmitProof() {
   const [status, setStatus] = useState<ProofStatus>('idle')
   const [result, setResult] = useState<ProofResult | null>(null)
@@ -24,13 +52,8 @@ export function useSubmitProof() {
     setResult(null)
 
     try {
-      // Convert file to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(imageFile)
-      })
+      // Compress image before upload (phone photos can be 10+ MB as base64)
+      const base64 = await compressImage(imageFile)
 
       // Upload to backend
       const uploadRes = await fetch('/proof/upload', {

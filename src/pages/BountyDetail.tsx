@@ -56,7 +56,8 @@ function useCountdown(expiryIso: string): string {
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
-  const s = Math.floor(diff / 1000)
+  const ms = Math.max(diff, 0)
+  const s = Math.floor(ms / 1000)
   if (s < 60) return `${s}s ago`
   const m = Math.floor(s / 60)
   if (m < 60) return `${m}m ago`
@@ -141,6 +142,12 @@ export default function BountyDetail() {
   const { publicKey, sendTransaction, connected } = useWallet()
   const { connection } = useConnection()
   const { assertDevnet } = useNetworkGuard()
+  const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const countdown = useCountdown(bounty?.expiry_at ?? new Date().toISOString())
 

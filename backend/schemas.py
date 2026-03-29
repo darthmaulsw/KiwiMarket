@@ -1,6 +1,12 @@
-from pydantic import BaseModel, Field
-from datetime import datetime
+from pydantic import BaseModel, Field, field_serializer
+from datetime import datetime, timezone
 from typing import Optional
+
+
+def _utc_iso(dt: datetime) -> str:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat().replace('+00:00', 'Z')
 
 
 # ─── Bounty ────────────────────────────────────────────────────────────────
@@ -32,6 +38,10 @@ class BountyOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_serializer('expiry_at', 'created_at')
+    def serialize_dt(self, v: datetime) -> str:
+        return _utc_iso(v)
+
 
 # ─── Bet ───────────────────────────────────────────────────────────────────
 
@@ -54,6 +64,10 @@ class BetOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_serializer('created_at')
+    def serialize_dt(self, v: datetime) -> str:
+        return _utc_iso(v)
+
 
 class BetFeedItem(BaseModel):
     id: int
@@ -64,6 +78,10 @@ class BetFeedItem(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_serializer('created_at')
+    def serialize_dt(self, v: datetime) -> str:
+        return _utc_iso(v)
 
 
 # ─── Proof ─────────────────────────────────────────────────────────────────
@@ -92,6 +110,10 @@ class PayoutOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_serializer('created_at')
+    def serialize_dt(self, v: datetime) -> str:
+        return _utc_iso(v)
+
 
 # ─── Profile ────────────────────────────────────────────────────────────────
 
@@ -114,6 +136,10 @@ class ProfileBountyItem(BaseModel):
     bet_count: int
     created_at: datetime
 
+    @field_serializer('expiry_at', 'created_at')
+    def serialize_dt(self, v: datetime) -> str:
+        return _utc_iso(v)
+
 
 class ProfileBetItem(BaseModel):
     id: int
@@ -126,6 +152,10 @@ class ProfileBetItem(BaseModel):
     tx_signature: Optional[str] = None
     created_at: datetime
 
+    @field_serializer('created_at')
+    def serialize_dt(self, v: datetime) -> str:
+        return _utc_iso(v)
+
 
 class ProfileFulfilledItem(BaseModel):
     bounty_id: int
@@ -133,6 +163,10 @@ class ProfileFulfilledItem(BaseModel):
     reward_sol: float
     reasoning: Optional[str] = None
     fulfilled_at: datetime
+
+    @field_serializer('fulfilled_at')
+    def serialize_dt(self, v: datetime) -> str:
+        return _utc_iso(v)
 
 
 class ActivityItem(BaseModel):
@@ -142,3 +176,7 @@ class ActivityItem(BaseModel):
     is_debit: bool
     tx_signature: Optional[str] = None
     created_at: datetime
+
+    @field_serializer('created_at')
+    def serialize_dt(self, v: datetime) -> str:
+        return _utc_iso(v)

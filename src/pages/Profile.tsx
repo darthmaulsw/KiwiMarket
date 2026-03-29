@@ -54,7 +54,8 @@ function abbrev(w: string) {
 
 function timeAgo(iso: string): string {
   const d = Date.now() - new Date(iso).getTime()
-  const s = Math.floor(d / 1000)
+  const ms = Math.max(d, 0)
+  const s = Math.floor(ms / 1000)
   if (s < 60) return `${s}s ago`
   const m = Math.floor(s / 60)
   if (m < 60) return `${m}m ago`
@@ -232,8 +233,14 @@ export default function Profile() {
   const [myFulfilled, setMyFulfilled] = useState<ProfileFulfilledItem[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [now, setNow] = useState(Date.now())
 
   const wallet = publicKey?.toBase58() ?? ''
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   // SOL balance
   useEffect(() => {
