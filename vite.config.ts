@@ -20,6 +20,7 @@ export default defineConfig({
     proxy: {
       '/bounties': 'http://localhost:8002',
       '/bets': 'http://localhost:8002',
+      '/proof': 'http://localhost:8002',
     },
   },
 })

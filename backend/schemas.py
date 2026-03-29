@@ -24,6 +24,7 @@ class BountyOut(BaseModel):
     yes_price: float
     no_price: float
     poster_wallet: str
+    fulfiller_wallet: Optional[str] = None
     status: str
     expiry_at: datetime
     created_at: datetime
@@ -58,6 +59,33 @@ class BetFeedItem(BaseModel):
     id: int
     bettor_wallet: str
     side: str
+    amount_sol: float
+    tx_signature: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Proof ─────────────────────────────────────────────────────────────────
+
+class ProofUpload(BaseModel):
+    bounty_id: int
+    fulfiller_wallet: str
+    image_base64: str
+
+
+class ProofOut(BaseModel):
+    proof_id: int
+    status: str
+    verdict: Optional[str] = None
+    reasoning: Optional[str] = None
+
+
+# ─── Payout ────────────────────────────────────────────────────────────────
+
+class PayoutOut(BaseModel):
+    id: int
+    recipient_wallet: str
     amount_sol: float
     tx_signature: Optional[str] = None
     created_at: datetime

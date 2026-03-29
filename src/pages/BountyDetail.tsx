@@ -10,6 +10,7 @@ import {
 import { useBounty } from '../hooks/useBounty'
 import { useNetworkGuard } from '../hooks/useNetworkGuard'
 import { ESCROW_WALLET } from '../constants/config'
+import FulfillModal from '../components/FulfillModal'
 import type { Bounty } from '../hooks/useBounties'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -18,6 +19,14 @@ interface BetFeedItem {
   id: number
   bettor_wallet: string
   side: string
+  amount_sol: number
+  tx_signature: string | null
+  created_at: string
+}
+
+interface PayoutItem {
+  id: number
+  recipient_wallet: string
   amount_sol: number
   tx_signature: string | null
   created_at: string
@@ -82,7 +91,7 @@ function useBetFeed(bountyId: string | undefined) {
       if (!res.ok) return
       setBets(await res.json())
     } catch {
-      // silent — feed is non-critical
+      // silent
     }
   }, [bountyId])
 
@@ -93,6 +102,27 @@ function useBetFeed(bountyId: string | undefined) {
   }, [fetch_])
 
   return { bets, refetchBets: fetch_ }
+}
+
+// ─── Payout feed hook ──────────────────────────────────────────────────────
+
+function usePayouts(bountyId: string | undefined, enabled: boolean) {
+  const [payouts, setPayouts] = useState<PayoutItem[]>([])
+
+  const fetch_ = useCallback(async () => {
+    if (!bountyId || !enabled) return
+    try {
+      const res = await fetch(`/bounties/${bountyId}/payouts`)
+      if (!res.ok) return
+      setPayouts(await res.json())
+    } catch {
+      // silent
+    }
+  }, [bountyId, enabled])
+
+  useEffect(() => { fetch_() }, [fetch_])
+
+  return { payouts, refetchPayouts: fetch_ }
 }
 
 // ─── Toast ─────────────────────────────────────────────────────────────────
@@ -106,6 +136,8 @@ export default function BountyDetail() {
   const navigate = useNavigate()
   const { bounty, loading, error, refetch } = useBounty(id)
   const { bets, refetchBets } = useBetFeed(id)
+  const isFulfilled = bounty?.status === 'fulfilled' || bounty?.status === 'resolved'
+  const { payouts, refetchPayouts } = usePayouts(id, isFulfilled)
   const { publicKey, sendTransaction, connected } = useWallet()
   const { connection } = useConnection()
   const { assertDevnet } = useNetworkGuard()
@@ -117,6 +149,9 @@ export default function BountyDetail() {
   const [betAmount, setBetAmount] = useState('0.05')
   const [placing, setPlacing] = useState(false)
   const [toast, setToast] = useState<ToastState | null>(null)
+
+  // Fulfill modal state
+  const [showFulfillModal, setShowFulfillModal] = useState(false)
 
   function showToast(msg: string, type: 'success' | 'error') {
     setToast({ msg, type })
@@ -130,10 +165,8 @@ export default function BountyDetail() {
 
     setPlacing(true)
     try {
-      // 0. Ensure wallet is on devnet
       await assertDevnet()
 
-      // 1. Build transaction
       const lamports = Math.round(amt * LAMPORTS_PER_SOL)
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
 
@@ -149,16 +182,13 @@ export default function BountyDetail() {
         })
       )
 
-      // 2. Sign + send via Phantom
       const signature = await sendTransaction(tx, connection)
 
-      // 3. Wait for on-chain confirmation
       await connection.confirmTransaction(
         { signature, blockhash, lastValidBlockHeight },
         'confirmed'
       )
 
-      // 4. Record in backend (best-effort — SOL is already on chain)
       try {
         const res = await fetch('/bets', {
           method: 'POST',
@@ -176,7 +206,6 @@ export default function BountyDetail() {
         console.error('Backend bet record error:', e)
       }
 
-      // 5. Success
       showToast(`Bet placed! 🥝 Tx: ${signature.slice(0, 8)}…`, 'success')
       refetch()
       refetchBets()
@@ -197,6 +226,11 @@ export default function BountyDetail() {
     } finally {
       setPlacing(false)
     }
+  }
+
+  function handleFulfillResolved() {
+    refetch()
+    refetchPayouts()
   }
 
   // ─── Render: loading / error ─────────────────────────────────────────────
@@ -227,6 +261,8 @@ export default function BountyDetail() {
   const activeOdds = betSide === 'YES' ? (100 / (bounty.yes_price * 100)).toFixed(2) : (100 / (bounty.no_price * 100)).toFixed(2)
   const statusStyle = STATUS_STYLE[bounty.status] ?? STATUS_STYLE.open
 
+  const canFulfill = connected && bounty.status === 'open' && publicKey?.toBase58() !== bounty.poster_wallet
+
   return (
     <>
       <style>{`
@@ -248,6 +284,17 @@ export default function BountyDetail() {
         }}>
           {toast.msg}
         </div>
+      )}
+
+      {/* Fulfill modal */}
+      {showFulfillModal && publicKey && (
+        <FulfillModal
+          bountyId={bounty.id}
+          bountyTitle={bounty.title}
+          fulfillerWallet={publicKey.toBase58()}
+          onClose={() => setShowFulfillModal(false)}
+          onResolved={handleFulfillResolved}
+        />
       )}
 
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '16px 16px 0' }}>
@@ -288,6 +335,21 @@ export default function BountyDetail() {
             </span>
           </div>
 
+          {/* Fulfilled banner */}
+          {bounty.status === 'fulfilled' && bounty.fulfiller_wallet && (
+            <div style={{
+              background: '#052e16', border: '1px solid #166534',
+              borderRadius: 10, padding: '12px 14px', marginBottom: 14,
+            }}>
+              <div style={{ color: '#4ade80', fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
+                ✅ Bounty fulfilled!
+              </div>
+              <div style={{ color: '#86efac', fontSize: 12 }}>
+                By {abbrev(bounty.fulfiller_wallet)}
+              </div>
+            </div>
+          )}
+
           {/* Odds bar */}
           <div style={{ marginBottom: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
@@ -311,14 +373,71 @@ export default function BountyDetail() {
           </div>
 
           {/* Fulfill button */}
-          <button disabled style={{
-            width: '100%', marginTop: 14, padding: '10px 0',
-            background: '#1f2937', border: '1px solid #374151',
-            borderRadius: 10, color: '#4b5563', fontSize: 13, cursor: 'not-allowed',
-          }}>
-            Fulfill this bounty (coming soon)
-          </button>
+          {bounty.status === 'open' && (
+            <button
+              onClick={() => canFulfill && setShowFulfillModal(true)}
+              disabled={!canFulfill}
+              style={{
+                width: '100%', marginTop: 14, padding: '11px 0',
+                background: canFulfill ? 'linear-gradient(135deg, #16a34a, #22c55e)' : '#1f2937',
+                border: canFulfill ? 'none' : '1px solid #374151',
+                borderRadius: 10,
+                color: canFulfill ? '#000' : '#4b5563',
+                fontSize: 14, fontWeight: 700,
+                cursor: canFulfill ? 'pointer' : 'not-allowed',
+              }}
+              title={
+                !connected
+                  ? 'Connect wallet to fulfill'
+                  : publicKey?.toBase58() === bounty.poster_wallet
+                  ? "Can't fulfill your own bounty"
+                  : 'Upload photo proof to claim the reward'
+              }
+            >
+              {!connected
+                ? '🔒 Connect wallet to fulfill'
+                : publicKey?.toBase58() === bounty.poster_wallet
+                ? '🥝 Your bounty'
+                : '📸 Fulfill this bounty'}
+            </button>
+          )}
         </div>
+
+        {/* ── Payout display (when fulfilled) ── */}
+        {isFulfilled && payouts.length > 0 && (
+          <div style={card}>
+            <h2 style={{ color: '#f3f4f6', fontSize: 15, fontWeight: 600, marginBottom: 14 }}>
+              Payouts
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {payouts.map(p => (
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 12px',
+                  background: '#0f172a', border: '1px solid #1f2937', borderRadius: 8,
+                }}>
+                  <span style={{ color: '#9ca3af', fontSize: 12, fontFamily: 'monospace', flex: 1 }}>
+                    {abbrev(p.recipient_wallet)}
+                  </span>
+                  <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 600 }}>
+                    +{p.amount_sol.toFixed(4)} SOL
+                  </span>
+                  {p.tx_signature && (
+                    <a
+                      href={`https://explorer.solana.com/tx/${p.tx_signature}?cluster=devnet`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: '#4ade80', fontSize: 11, flexShrink: 0 }}
+                      title={p.tx_signature}
+                    >
+                      ↗
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Bet placement panel ── */}
         <div style={card}>
@@ -449,7 +568,6 @@ export default function BountyDetail() {
                   padding: '10px 12px',
                   background: '#0f172a', border: '1px solid #1f2937', borderRadius: 8,
                 }}>
-                  {/* Side badge */}
                   <span style={{
                     fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 700,
                     background: bet.side === 'YES' ? '#14532d' : '#1c0a0a',
@@ -459,23 +577,15 @@ export default function BountyDetail() {
                   }}>
                     {bet.side}
                   </span>
-
-                  {/* Wallet */}
                   <span style={{ color: '#9ca3af', fontSize: 12, fontFamily: 'monospace', flex: 1 }}>
                     {abbrev(bet.bettor_wallet)}
                   </span>
-
-                  {/* Amount */}
                   <span style={{ color: '#f3f4f6', fontSize: 13, fontWeight: 600 }}>
                     {bet.amount_sol.toFixed(4)} SOL
                   </span>
-
-                  {/* Time */}
                   <span style={{ color: '#4b5563', fontSize: 11, flexShrink: 0 }}>
                     {timeAgo(bet.created_at)}
                   </span>
-
-                  {/* Tx link */}
                   {bet.tx_signature && (
                     <a
                       href={`https://explorer.solana.com/tx/${bet.tx_signature}?cluster=devnet`}

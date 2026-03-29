@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from database import engine, SessionLocal
 from models import Base, Bounty
-from routers import bounties, bets
+from routers import bounties, bets, proof
 
 logger = logging.getLogger("kiwimarket")
 
@@ -18,6 +18,7 @@ with engine.connect() as _conn:
     for col_sql in [
         "ALTER TABLE bets ADD COLUMN tx_signature VARCHAR",
         "ALTER TABLE bounties ADD COLUMN tx_signature VARCHAR",
+        "ALTER TABLE bounties ADD COLUMN fulfiller_wallet VARCHAR",
     ]:
         try:
             _conn.execute(text(col_sql))
@@ -44,6 +45,7 @@ app.add_middleware(
 
 app.include_router(bounties.router)
 app.include_router(bets.router)
+app.include_router(proof.router)
 
 
 # ─── Background expiry task ────────────────────────────────────────────────
@@ -120,3 +122,8 @@ async def startup() -> None:
 @app.get("/")
 def root():
     return {"status": "ok", "app": "KiwiMarket API 🥝"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8002, reload=False)
