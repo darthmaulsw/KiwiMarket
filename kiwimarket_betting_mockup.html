@@ -1,0 +1,268 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .phone {
+    width: 320px; margin: 0 auto;
+    background: #0a0a0a; border-radius: 32px;
+    border: 2px solid #1f2937; overflow: hidden;
+    height: 640px; display: flex; flex-direction: column; position: relative;
+  }
+  .status-bar { background: #0a0a0a; padding: 8px 16px 4px; display: flex; justify-content: space-between; font-size: 11px; color: #9ca3af; }
+  .header { background: #0f0f0f; padding: 10px 16px; border-bottom: 1px solid #1f2937; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 6px; }
+  .logo-icon { width: 22px; height: 22px; background: #22c55e; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .logo-text { color: #fff; font-size: 15px; font-weight: 500; }
+  .live-badge { background: #14532d; color: #4ade80; font-size: 10px; padding: 2px 8px; border-radius: 10px; border: 1px solid #166534; }
+  .feed { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 12px; cursor: pointer; }
+  .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: #14532d; color: #4ade80; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; flex-shrink: 0; }
+  .username { color: #e5e7eb; font-size: 12px; font-weight: 500; }
+  .timestamp { color: #6b7280; font-size: 10px; }
+  .price-badge { background: #14532d; color: #4ade80; font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 500; }
+  .statement { color: #f3f4f6; font-size: 12px; line-height: 1.5; margin-bottom: 10px; }
+  .spread-label { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 3px; }
+  .spread-bar { height: 4px; border-radius: 4px; background: #374151; overflow: hidden; margin-bottom: 8px; }
+  .spread-yes { height: 100%; background: #22c55e; border-radius: 4px; transition: width 0.4s ease; }
+  .view-btn { width: 100%; padding: 5px; background: transparent; border: 1px solid #22c55e; border-radius: 8px; color: #22c55e; font-size: 11px; cursor: pointer; }
+  .bottom-nav { background: #0f0f0f; border-top: 1px solid #1f2937; display: flex; padding: 6px 0 10px; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+  .tab-dot { width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .tab.active .tab-dot { background: #14532d; }
+  .tab-label { font-size: 9px; color: #6b7280; }
+  .tab.active .tab-label { color: #22c55e; }
+  .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: flex-end; z-index: 10; }
+  .modal-sheet { background: #111827; border-radius: 20px 20px 0 0; border: 1px solid #1f2937; border-bottom: none; width: 100%; padding: 14px 16px 20px; position: relative; }
+  .modal-handle { width: 36px; height: 3px; background: #374151; border-radius: 2px; margin: 0 auto 14px; }
+  .close-btn { position: absolute; right: 14px; top: 14px; background: #1f2937; border: none; border-radius: 50%; width: 24px; height: 24px; color: #9ca3af; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .modal-title { color: #fff; font-size: 13px; font-weight: 500; margin-bottom: 8px; line-height: 1.5; }
+  .modal-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .modal-creator { color: #9ca3af; font-size: 11px; }
+  .modal-price-tag { color: #4ade80; font-size: 11px; font-weight: 500; }
+  .modal-spread-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+  .modal-bar { height: 6px; border-radius: 6px; background: #374151; overflow: hidden; margin-bottom: 6px; }
+  .modal-yes-fill { height: 100%; background: #22c55e; border-radius: 6px; transition: width 0.4s ease; }
+  .odds-row { display: flex; justify-content: space-between; margin-bottom: 14px; }
+  .odds-pill { font-size: 10px; padding: 2px 8px; border-radius: 8px; }
+  .odds-yes { background: #14532d; color: #4ade80; }
+  .odds-no { background: #1f2937; color: #9ca3af; }
+  .bet-btns { display: flex; gap: 8px; margin-bottom: 8px; }
+  .bet-yes-btn { flex: 1; padding: 9px; background: #22c55e; border: none; border-radius: 10px; color: #000; font-size: 12px; font-weight: 500; cursor: pointer; }
+  .bet-no-btn { flex: 1; padding: 9px; background: transparent; border: 1px solid #4b5563; border-radius: 10px; color: #d1d5db; font-size: 12px; cursor: pointer; }
+  .fulfill-btn-sec { width: 100%; padding: 7px; background: transparent; border: 1px solid #374151; border-radius: 10px; color: #9ca3af; font-size: 11px; cursor: pointer; }
+  .bet-slip { background: #0f172a; border: 1px solid #1f2937; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .bet-slip-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .side-badge { font-size: 11px; padding: 3px 10px; border-radius: 8px; font-weight: 500; }
+  .side-yes { background: #14532d; color: #4ade80; }
+  .side-no { background: #1f2937; color: #9ca3af; border: 1px solid #374151; }
+  .bet-slip-label { color: #9ca3af; font-size: 11px; margin-bottom: 4px; }
+  .sol-input-wrap { display: flex; align-items: center; background: #1f2937; border-radius: 8px; padding: 6px 10px; margin-bottom: 10px; }
+  .sol-input { background: transparent; border: none; color: #fff; font-size: 14px; font-weight: 500; flex: 1; outline: none; width: 60px; }
+  .sol-unit { color: #4ade80; font-size: 12px; font-weight: 500; }
+  .payout-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .payout-label { color: #6b7280; font-size: 11px; }
+  .payout-val { color: #4ade80; font-size: 13px; font-weight: 500; }
+  .confirm-btn { width: 100%; padding: 9px; background: #22c55e; border: none; border-radius: 10px; color: #000; font-size: 12px; font-weight: 500; cursor: pointer; margin-bottom: 6px; }
+  .cancel-link { text-align: center; color: #6b7280; font-size: 11px; cursor: pointer; display: block; }
+  .hidden { display: none; }
+  .toast { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: #14532d; color: #4ade80; border: 1px solid #166534; border-radius: 10px; padding: 8px 16px; font-size: 12px; z-index: 20; white-space: nowrap; transition: opacity 0.3s; }
+</style>
+
+<div style="padding: 1rem 0; display: flex; justify-content: center;">
+<div class="phone" id="phone">
+  <div class="status-bar"><span>9:41</span><span>SOL ◆</span></div>
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🥝</div>
+      <span class="logo-text">KiwiMarket</span>
+    </div>
+    <div class="live-badge">LIVE</div>
+  </div>
+
+  <div class="feed">
+    <div class="card" onclick="openModal(0)">
+      <div class="card-top">
+        <div class="avatar">JD</div>
+        <div style="flex:1"><div class="username">@jakd.sol</div><div class="timestamp">2 min ago</div></div>
+        <div class="price-badge" id="price0">0.05 SOL</div>
+      </div>
+      <div class="statement">"I bet no one will bring me a fresh kiwi fruit to my door in under 2 hours."</div>
+      <div class="spread-label"><span style="color:#4ade80" id="yl0">Yes 62%</span><span style="color:#6b7280" id="nl0">No 38%</span></div>
+      <div class="spread-bar"><div class="spread-yes" id="bar0" style="width:62%"></div></div>
+      <button class="view-btn">View condition</button>
+    </div>
+    <div class="card" onclick="openModal(1)">
+      <div class="card-top">
+        <div class="avatar" style="background:#1e3a5f;color:#60a5fa">MR</div>
+        <div style="flex:1"><div class="username">@marta.sol</div><div class="timestamp">14 min ago</div></div>
+        <div class="price-badge" id="price1">0.2 SOL</div>
+      </div>
+      <div class="statement">"I bet no one can solve a Rubik's cube in under 30 seconds on camera."</div>
+      <div class="spread-label"><span style="color:#4ade80" id="yl1">Yes 44%</span><span style="color:#6b7280" id="nl1">No 56%</span></div>
+      <div class="spread-bar"><div class="spread-yes" id="bar1" style="width:44%"></div></div>
+      <button class="view-btn">View condition</button>
+    </div>
+    <div class="card" onclick="openModal(2)">
+      <div class="card-top">
+        <div class="avatar" style="background:#3b1f5e;color:#c084fc">ZK</div>
+        <div style="flex:1"><div class="username">@zkane.sol</div><div class="timestamp">1 hr ago</div></div>
+        <div class="price-badge" id="price2">1.0 SOL</div>
+      </div>
+      <div class="statement">"I bet no one will ride a unicycle across the Brooklyn Bridge and send proof."</div>
+      <div class="spread-label"><span style="color:#4ade80" id="yl2">Yes 21%</span><span style="color:#6b7280" id="nl2">No 79%</span></div>
+      <div class="spread-bar"><div class="spread-yes" id="bar2" style="width:21%"></div></div>
+      <button class="view-btn">View condition</button>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="tab active"><div class="tab-dot">🏪</div><span class="tab-label">Market</span></div>
+    <div class="tab"><div class="tab-dot">👛</div><span class="tab-label">Wallet</span></div>
+    <div class="tab"><div class="tab-dot">✏️</div><span class="tab-label">Post</span></div>
+    <div class="tab"><div class="tab-dot">⏳</div><span class="tab-label">In Progress</span></div>
+  </div>
+
+  <div class="modal-overlay hidden" id="modal">
+    <div class="modal-sheet">
+      <button class="close-btn" onclick="closeModal()">✕</button>
+      <div class="modal-handle"></div>
+
+      <div id="post-view">
+        <div class="modal-title" id="m-title"></div>
+        <div class="modal-meta">
+          <span class="modal-creator" id="m-creator"></span>
+          <span style="color:#374151">·</span>
+          <span class="modal-price-tag" id="m-price"></span>
+        </div>
+        <div class="modal-spread-row">
+          <span style="color:#4ade80" id="m-yes-label"></span>
+          <span style="color:#6b7280" id="m-no-label"></span>
+        </div>
+        <div class="modal-bar"><div class="modal-yes-fill" id="m-bar"></div></div>
+        <div class="odds-row">
+          <span class="odds-pill odds-yes" id="m-odds-yes"></span>
+          <span class="odds-pill odds-no" id="m-odds-no"></span>
+        </div>
+        <div class="bet-btns">
+          <button class="bet-yes-btn" onclick="openBetSlip('yes')">Bet Yes</button>
+          <button class="bet-no-btn" onclick="openBetSlip('no')">Bet No</button>
+        </div>
+        <button class="fulfill-btn-sec">Fulfill condition</button>
+      </div>
+
+      <div id="slip-view" class="hidden">
+        <div class="bet-slip">
+          <div class="bet-slip-header">
+            <span style="color:#9ca3af;font-size:11px">Betting</span>
+            <span class="side-badge" id="slip-side-badge"></span>
+            <span style="color:#9ca3af;font-size:10px;margin-left:auto" id="slip-odds-label"></span>
+          </div>
+          <div class="bet-slip-label">Amount</div>
+          <div class="sol-input-wrap">
+            <input class="sol-input" type="number" id="bet-amount" value="0.1" min="0.01" step="0.01" oninput="calcPayout()" />
+            <span class="sol-unit">SOL</span>
+          </div>
+          <div class="payout-row">
+            <span class="payout-label">Estimated win</span>
+            <span class="payout-val" id="payout-display">→ 0.16 SOL</span>
+          </div>
+        </div>
+        <button class="confirm-btn" onclick="confirmBet()">Confirm Bet</button>
+        <span class="cancel-link" onclick="cancelSlip()">Cancel</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+</div>
+</div>
+
+<script>
+const posts = [
+  { title: '"I bet no one will bring me a fresh kiwi to my door in under 2 hours."', creator: '@jakd.sol · 2 min ago', price: '0.05 SOL', yes: 62, no: 38 },
+  { title: '"I bet no one can solve a Rubik\'s cube in under 30 seconds on camera."', creator: '@marta.sol · 14 min ago', price: '0.20 SOL', yes: 44, no: 56 },
+  { title: '"I bet no one will ride a unicycle across the Brooklyn Bridge and send proof."', creator: '@zkane.sol · 1 hr ago', price: '1.0 SOL', yes: 21, no: 79 },
+];
+let current = 0;
+let currentSide = 'yes';
+
+function openModal(i) {
+  current = i;
+  const p = posts[i];
+  document.getElementById('m-title').textContent = p.title;
+  document.getElementById('m-creator').textContent = p.creator;
+  document.getElementById('m-price').textContent = p.price;
+  document.getElementById('m-yes-label').textContent = 'Yes ' + p.yes + '%';
+  document.getElementById('m-no-label').textContent = 'No ' + p.no + '%';
+  document.getElementById('m-bar').style.width = p.yes + '%';
+  const yOdds = (100 / p.yes).toFixed(2);
+  const nOdds = (100 / p.no).toFixed(2);
+  document.getElementById('m-odds-yes').textContent = 'Yes pays ' + yOdds + 'x';
+  document.getElementById('m-odds-no').textContent = 'No pays ' + nOdds + 'x';
+  document.getElementById('post-view').classList.remove('hidden');
+  document.getElementById('slip-view').classList.add('hidden');
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+}
+
+function openBetSlip(side) {
+  currentSide = side;
+  const p = posts[current];
+  const badge = document.getElementById('slip-side-badge');
+  if (side === 'yes') {
+    badge.textContent = 'YES';
+    badge.className = 'side-badge side-yes';
+    const odds = (100 / p.yes).toFixed(2);
+    document.getElementById('slip-odds-label').textContent = odds + 'x payout';
+  } else {
+    badge.textContent = 'NO';
+    badge.className = 'side-badge side-no';
+    const odds = (100 / p.no).toFixed(2);
+    document.getElementById('slip-odds-label').textContent = odds + 'x payout';
+  }
+  document.getElementById('bet-amount').value = '0.10';
+  calcPayout();
+  document.getElementById('post-view').classList.add('hidden');
+  document.getElementById('slip-view').classList.remove('hidden');
+}
+
+function calcPayout() {
+  const p = posts[current];
+  const amt = parseFloat(document.getElementById('bet-amount').value) || 0;
+  const odds = currentSide === 'yes' ? (100 / p.yes) : (100 / p.no);
+  const win = (amt * odds).toFixed(3);
+  document.getElementById('payout-display').textContent = '→ ' + win + ' SOL';
+}
+
+function cancelSlip() {
+  document.getElementById('slip-view').classList.add('hidden');
+  document.getElementById('post-view').classList.remove('hidden');
+}
+
+function confirmBet() {
+  const p = posts[current];
+  const amt = parseFloat(document.getElementById('bet-amount').value) || 0;
+  if (currentSide === 'yes') {
+    p.yes = Math.min(95, p.yes + Math.round(amt * 10));
+    p.no = 100 - p.yes;
+  } else {
+    p.no = Math.min(95, p.no + Math.round(amt * 10));
+    p.yes = 100 - p.no;
+  }
+  document.getElementById('yl' + current).textContent = 'Yes ' + p.yes + '%';
+  document.getElementById('nl' + current).textContent = 'No ' + p.no + '%';
+  document.getElementById('bar' + current).style.width = p.yes + '%';
+  closeModal();
+  showToast('Bet placed on ' + (currentSide === 'yes' ? 'YES' : 'NO') + '! Added to In Progress.');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 3000);
+}
+</script>
