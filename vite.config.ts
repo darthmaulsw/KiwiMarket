@@ -17,5 +17,9 @@ export default defineConfig({
   },
   server: {
     allowedHosts: ['heterotelic-haylee-nonepically.ngrok-free.dev'],
+    proxy: {
+      '/bounties': 'http://localhost:8001',
+      '/bets': 'http://localhost:8001',
+    },
   },
 })
