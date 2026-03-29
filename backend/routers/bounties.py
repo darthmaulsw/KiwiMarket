@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from database import get_db
 from models import Bounty, Bet, Payout
 from schemas import BountyCreate, BountyOut, BetFeedItem, PayoutOut
+from services.payout import resolve_expired_bounty
 
 router = APIRouter(prefix="/bounties", tags=["bounties"])
 
@@ -30,7 +31,7 @@ def _attach_prices(bounty: Bounty) -> BountyOut:
 
 
 def _expire_stale(db: Session) -> None:
-    """Mark any open bounties past their expiry_at as expired."""
+    """Mark any open bounties past their expiry_at as expired, then pay out NO bettors."""
     now = datetime.now(timezone.utc)
     stale = (
         db.query(Bounty)
@@ -41,6 +42,11 @@ def _expire_stale(db: Session) -> None:
         b.status = "expired"
     if stale:
         db.commit()
+        for b in stale:
+            try:
+                resolve_expired_bounty(b.id, db)
+            except Exception:
+                pass
 
 
 # ── IMPORTANT: /active must be declared before /{bounty_id} ──────────────

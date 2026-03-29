@@ -8,6 +8,7 @@ from sqlalchemy import text
 from database import engine, SessionLocal
 from models import Base, Bounty
 from routers import bounties, bets, proof, profile
+from services.payout import resolve_expired_bounty
 
 logger = logging.getLogger("kiwimarket")
 
@@ -63,6 +64,11 @@ async def _expiry_loop() -> None:
             if stale:
                 db.commit()
                 logger.info("Auto-expired %d bounties", len(stale))
+                for b in stale:
+                    try:
+                        resolve_expired_bounty(b.id, db)
+                    except Exception as exc:
+                        logger.error("Expiry payout for bounty %d failed: %s", b.id, exc)
         except Exception as exc:
             logger.error("Expiry loop error: %s", exc)
         finally:

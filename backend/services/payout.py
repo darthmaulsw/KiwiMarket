@@ -79,3 +79,71 @@ def resolve_bounty(bounty_id: int, proof: Proof, db: Session) -> None:
     db.commit()
     logger.info("Bounty %d resolved. Fulfiller=%s amount=%.4f SOL",
                 bounty_id, fulfiller_wallet, fulfiller_amount)
+
+
+def resolve_expired_bounty(bounty_id: int, db: Session) -> None:
+    """
+    Called when a bounty expires unfulfilled.
+    - Poster gets their reward_sol refunded in full.
+    - NO bettors get their stake back + proportional share of the YES pool (5% fee on winnings).
+    - YES bettors lose their stake.
+    Bounty status is updated to 'resolved'.
+    """
+    bounty = db.query(Bounty).filter(Bounty.id == bounty_id).first()
+    if not bounty:
+        return
+    if bounty.status != "expired":
+        return
+
+    # Guard: don't double-pay if payouts already exist
+    if db.query(Payout).filter(Payout.bounty_id == bounty_id).count() > 0:
+        bounty.status = "resolved"
+        db.commit()
+        return
+
+    # ── 1. Refund poster ────────────────────────────────────────────────────
+    try:
+        sig = send_sol(bounty.poster_wallet, bounty.reward_sol)
+    except Exception as exc:
+        logger.error("Expiry refund to poster failed: %s", exc)
+        sig = None
+
+    db.add(Payout(
+        bounty_id=bounty_id,
+        recipient_wallet=bounty.poster_wallet,
+        amount_sol=bounty.reward_sol,
+        tx_signature=sig,
+    ))
+
+    # ── 2. Pay NO bettors (stake + share of YES pool) ───────────────────────
+    no_bets = db.query(Bet).filter(Bet.bounty_id == bounty_id, Bet.side == "NO").all()
+    yes_bets = db.query(Bet).filter(Bet.bounty_id == bounty_id, Bet.side == "YES").all()
+
+    no_pool = sum(b.amount_sol for b in no_bets)
+    yes_pool = sum(b.amount_sol for b in yes_bets)
+
+    for bet in no_bets:
+        if no_pool == 0:
+            break
+        share = bet.amount_sol / no_pool
+        winnings = round(bet.amount_sol + share * yes_pool * (1 - PLATFORM_FEE), 9)
+        try:
+            bet_sig = send_sol(bet.bettor_wallet, winnings)
+        except Exception as exc:
+            logger.error("Expiry payout to NO bettor %s failed: %s", bet.bettor_wallet, exc)
+            bet_sig = None
+
+        db.add(Payout(
+            bounty_id=bounty_id,
+            recipient_wallet=bet.bettor_wallet,
+            amount_sol=winnings,
+            tx_signature=bet_sig,
+        ))
+
+    # ── 3. Mark resolved ────────────────────────────────────────────────────
+    bounty.status = "resolved"
+    db.commit()
+    logger.info(
+        "Expired bounty %d resolved. Refunded poster %s (%.4f SOL), paid %d NO bettors",
+        bounty_id, bounty.poster_wallet, bounty.reward_sol, len(no_bets),
+    )
