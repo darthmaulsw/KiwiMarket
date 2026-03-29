@@ -30,7 +30,7 @@ export function useBounties(): UseBountiesResult {
 
   const fetchBounties = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/bounties`)
+      const res = await fetch(`${API_URL}/bounties/active`)
       if (!res.ok) throw new Error(`Server error: ${res.status}`)
       const data: Bounty[] = await res.json()
       setBounties(data)

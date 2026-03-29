@@ -11,6 +11,7 @@ class BountyCreate(BaseModel):
     reward_sol: float = Field(gt=0)
     expiry_minutes: int = Field(gt=0, default=60)
     poster_wallet: str
+    tx_signature: Optional[str] = None
 
 
 class BountyOut(BaseModel):
@@ -20,12 +21,13 @@ class BountyOut(BaseModel):
     reward_sol: float
     yes_pool: float
     no_pool: float
-    yes_price: float          # computed: yes_pool / (yes_pool + no_pool)
-    no_price: float           # computed: no_pool  / (yes_pool + no_pool)
+    yes_price: float
+    no_price: float
     poster_wallet: str
     status: str
     expiry_at: datetime
     created_at: datetime
+    tx_signature: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

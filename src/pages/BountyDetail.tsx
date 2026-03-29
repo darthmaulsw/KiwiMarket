@@ -8,6 +8,7 @@ import {
   PublicKey,
 } from '@solana/web3.js'
 import { useBounty } from '../hooks/useBounty'
+import { useNetworkGuard } from '../hooks/useNetworkGuard'
 import { ESCROW_WALLET } from '../constants/config'
 import type { Bounty } from '../hooks/useBounties'
 
@@ -107,6 +108,7 @@ export default function BountyDetail() {
   const { bets, refetchBets } = useBetFeed(id)
   const { publicKey, sendTransaction, connected } = useWallet()
   const { connection } = useConnection()
+  const { assertDevnet } = useNetworkGuard()
 
   const countdown = useCountdown(bounty?.expiry_at ?? new Date().toISOString())
 
@@ -128,6 +130,9 @@ export default function BountyDetail() {
 
     setPlacing(true)
     try {
+      // 0. Ensure wallet is on devnet
+      await assertDevnet()
+
       // 1. Build transaction
       const lamports = Math.round(amt * LAMPORTS_PER_SOL)
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()

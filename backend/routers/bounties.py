@@ -24,11 +24,43 @@ def _attach_prices(bounty: Bounty) -> BountyOut:
         status=bounty.status,
         expiry_at=bounty.expiry_at,
         created_at=bounty.created_at,
+        tx_signature=bounty.tx_signature,
     )
+
+
+def _expire_stale(db: Session) -> None:
+    """Mark any open bounties past their expiry_at as expired."""
+    now = datetime.now(timezone.utc)
+    stale = (
+        db.query(Bounty)
+        .filter(Bounty.status == "open", Bounty.expiry_at < now)
+        .all()
+    )
+    for b in stale:
+        b.status = "expired"
+    if stale:
+        db.commit()
+
+
+# ── IMPORTANT: /active must be declared before /{bounty_id} ──────────────
+
+@router.get("/active", response_model=list[BountyOut])
+def list_active_bounties(db: Session = Depends(get_db)):
+    """Return only bounties that are open AND not yet past expiry.
+    Also auto-expires any stale open bounties on each call."""
+    _expire_stale(db)
+    bounties = (
+        db.query(Bounty)
+        .filter(Bounty.status == "open")
+        .order_by(Bounty.created_at.desc())
+        .all()
+    )
+    return [_attach_prices(b) for b in bounties]
 
 
 @router.get("", response_model=list[BountyOut])
 def list_bounties(db: Session = Depends(get_db)):
+    """Return all open bounties (no expiry filter — for backward compat)."""
     bounties = (
         db.query(Bounty)
         .filter(Bounty.status == "open")
@@ -69,6 +101,7 @@ def create_bounty(payload: BountyCreate, db: Session = Depends(get_db)):
         reward_sol=payload.reward_sol,
         poster_wallet=payload.poster_wallet,
         expiry_at=expiry,
+        tx_signature=payload.tx_signature,
     )
     db.add(bounty)
     db.commit()

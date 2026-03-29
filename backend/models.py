@@ -17,6 +17,7 @@ class Bounty(Base):
     status = Column(String, nullable=False, default="open")  # open / fulfilled / expired / resolved
     expiry_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    tx_signature = Column(String, nullable=True)
 
     bets = relationship("Bet", back_populates="bounty", cascade="all, delete-orphan")
 
